@@ -22,17 +22,21 @@ text_splitter = RecursiveCharacterTextSplitter(
 )
 chunks = text_splitter.split_documents(data)
 
-# import embedding model
-# TODO: review model choice and setup
-model_name = "sentence-transformers/all-mpnet-base-v2"
+# Embed chunks and store them in ChromaDB vector store (a local database of chunk vector embeddings)
+model_name = "BAAI/bge-small-en"
 model_kwargs = {'device': 'cpu'}
-encode_kwargs = {'normalize_embeddings': False}
+encode_kwargs = {'normalize_embeddings': True}  # set True to compute cosine similarity
 hf = HuggingFaceEmbeddings(
     model_name=model_name,
     model_kwargs=model_kwargs,
     encode_kwargs=encode_kwargs
 )
+db = Chroma.from_documents(documents=chunks, embedding=hf)  # db loads in memory
 
-# embed chunks and store them in ChromaDB vector store (a local database of chunk vector embeddings)
-db = Chroma.from_documents(documents=chunks, embedding=OpenAIEmbeddings())
+
+# re-order docs after retrieval to avoid performance degradation:
+# https://python.langchain.com/docs/modules/data_connection/document_transformers/post_retrieval/long_context_reorder
+
+# prepend the following instruction to the user query
+instruction = "Represent this sentence for searching relevant passages: "
 
